@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+.cache/
+build/
+dist/
+.env
+.env.*
+.keys
+credentials/
+*.pem
+*.key
+*.sqlite*
+*.jsonl
+reports/
+backups/
+.serena/
