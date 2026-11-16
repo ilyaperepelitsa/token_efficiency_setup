@@ -73,6 +73,27 @@ Claude reports include that session's workers. Codex reports cover the specified
 rollout only. Counts are recorded usage, **not subscription allowance or a bill**.
 See [accounting and limitations](docs/accounting.md).
 
+## Evidence, including the limits
+
+In an uncontrolled sample across two real sessions, equal 15-minute windows showed:
+
+| Metric | Before → after | Change |
+| --- | ---: | ---: |
+| New input + cache writes | 4.43M → 4.21M | −4.9% |
+| Cached input | 73.25M → 47.17M | −35.6% |
+| Output | 223.59k → 303.46k | **+35.7%** |
+| Model responses | 243 → 267 | **+9.9%** |
+
+**Smaller contexts were observed; better overall efficiency was not established.**
+Workloads were not matched and accepted-work comparison was unavailable. Multiple
+changes happened together, so these figures do not isolate Serena, CodeBurn or the
+review skill, and do not measure subscription savings.
+
+See [the full observation and limitations](docs/observations.md) and
+[exact anonymized aggregates](data/anonymized-observations.json). Names, languages,
+models, identifiers, paths and calendar timestamps have been removed. Raw session
+records remain private, which limits independent verification of this sample.
+
 ## Privacy and validation
 
 The tools read local usage metadata and do not upload it or make model/network
@@ -83,10 +104,12 @@ usage counts and a local output path. See [privacy boundaries](docs/privacy.md).
 ```sh
 python3 -m unittest discover -s tests -v
 python3 scripts/check_public_content.py
+python3 scripts/check_evidence.py
 ```
 
-Only synthetic fixtures are included. No runtime reports, personal configuration,
-session exports, user histories or project-specific instructions belong here.
+Tests use synthetic fixtures. The only real-session evidence is the explicitly
+allowlisted anonymized aggregate above. No raw runtime reports, personal
+configuration, session exports, histories or project-specific instructions belong here.
 
 Upstream: [Serena](https://github.com/oraios/serena),
 [Serena client setup](https://oraios.github.io/serena/02-usage/030_clients.html),

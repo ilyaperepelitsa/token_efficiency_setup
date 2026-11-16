@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "window_minutes": 15,
+  "workloads_matched": false,
+  "accepted_work_comparison_available": false,
+  "usage": {
+    "before": {
+      "responses": 243,
+      "new_input_and_writes": 4432790,
+      "cached_input": 73254441,
+      "output": 223591
+    },
+    "after": {
+      "responses": 267,
+      "new_input_and_writes": 4214154,
+      "cached_input": 47169039,
+      "output": 303464
+    }
+  },
+  "lead_contexts": [
+    {
+      "sample": "A",
+      "before_input": 200016,
+      "after_input": 120766
+    },
+    {
+      "sample": "B",
+      "before_input": 265029,
+      "after_input": 113382
+    }
+  ]
+}

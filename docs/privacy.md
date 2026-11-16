@@ -1,7 +1,9 @@
 # Privacy boundaries
 
-This repository contains generic instructions, code and synthetic tests only.
-Do not publish local reports, transcripts, screenshots, session identifiers,
+This repository contains generic instructions, code, synthetic tests and one
+explicitly reviewed anonymized aggregate. Its allowed numeric fields and anonymous
+labels are checked separately; it contains no raw session records. Do not publish
+raw local reports, transcripts, screenshots, session identifiers,
 agent briefs, personal filesystem layouts, account configuration or credentials.
 The release check flags common private paths, secret patterns and runtime file
 types, but cannot prove the absence of every form of sensitive content.

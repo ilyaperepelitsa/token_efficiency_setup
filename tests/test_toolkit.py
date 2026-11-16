@@ -57,6 +57,26 @@ class PublicContentTests(unittest.TestCase):
         self.assertEqual(m.inspect(Path('example.md'),'Use ~/.config or /path/to/worktree.'),[])
 
 
+class EvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.m=module('evidence',ROOT/'scripts/check_evidence.py')
+        self.data=json.loads((ROOT/'data/anonymized-observations.json').read_text())
+
+    def test_only_anonymous_aggregates_and_reproducible_arithmetic(self):
+        changes=self.m.validate(self.data)
+        self.assertEqual(changes, {'responses':9.9,'new_input_and_writes':-4.9,
+                                  'cached_input':-35.6,'output':35.7})
+        self.assertFalse(self.data['workloads_matched'])
+        self.assertFalse(self.data['accepted_work_comparison_available'])
+
+    def test_identifying_fields_and_free_text_are_rejected(self):
+        self.data['usage']['before']['project_name']='example'
+        with self.assertRaises(ValueError):self.m.validate(self.data)
+        del self.data['usage']['before']['project_name']
+        self.data['lead_contexts'][0]['sample']='identifying-label'
+        with self.assertRaises(ValueError):self.m.validate(self.data)
+
+
 def load_tests(loader, tests, pattern):
     review=module('review_tests',ROOT/'skills/codeburn-review/scripts/test_review.py')
     tests.addTests(loader.loadTestsFromModule(review))
