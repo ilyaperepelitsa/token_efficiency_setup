@@ -1,0 +1,13 @@
+[Unit]
+Description=CPU admission guardian; resource control only
+[Service]
+Type=simple
+ExecStart=/usr/bin/flock -n @LOCK@ @PYTHON@ @GUARDIAN@ --config @CONFIG@
+Restart=on-failure
+RestartSec=2
+MemoryMax=96M
+MemorySwapMax=0
+TasksMax=64
+Nice=10
+[Install]
+WantedBy=default.target

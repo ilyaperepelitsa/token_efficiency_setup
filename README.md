@@ -4,10 +4,11 @@ A language-neutral setup for using **Serena** to navigate source and **CodeBurn*
 to inspect coding-agent usage, with compact 15-minute reviews for active tasks.
 Works with Claude Code and Codex; Cursor gets the shared skill and instructions.
 
-This repository provides setup recipes, a portable review skill and an optional
-advisory reminder. It does not choose models, change permissions, create agent
-teams or relax project acceptance checks. Savings are workload-dependent; measure
-accepted work as well as usage before claiming an improvement.
+This repository provides setup recipes, a portable review skill, an optional
+advisory reminder and a separately opted-in Linux CPU guard. It does not choose
+models, change permissions, create agent teams or relax project acceptance checks.
+Savings are workload-dependent; measure accepted work as well as usage before
+claiming an improvement.
 
 ## Start here
 
@@ -94,10 +95,31 @@ See [the full observation and limitations](docs/observations.md) and
 models, identifiers, paths and calendar timestamps have been removed. Raw session
 records remain private, which limits independent verification of this sample.
 
+## Optional: CPU reservations and execution reviews
+
+The [Linux CPU component](docs/cpu-enforcement.md) adds kernel CPU boundaries,
+service launch gates, verified drain/loan checks and required 15-minute review
+acknowledgements. It preserves native sandboxes and uses a small resource-only
+guardian; installing the usage-review skill does **not** activate it.
+
+**Admission was verified; better throughput was not.** In the local deployment,
+missing completion notifications and a serial candidate dependency still left
+reserved capacity idle. The guard cannot create runnable work or prove useful
+progress. [Limits and reproducible native checks](docs/cpu-enforcement.md#verification-and-honest-evidence)
+are documented, with synthetic [configuration](examples/cpu-config.json),
+[reservation table](examples/CPU.md) and [AGENTS rules](examples/CPU-AGENTS.snippet.md).
+
+```sh
+python3 scripts/install_cpu.py --config /path/to/private-config.json --clients claude codex
+# Preview first; add --apply only after adapting the private configuration.
+```
+
 ## Privacy and validation
 
-The tools read local usage metadata and do not upload it or make model/network
-calls. The coding client still sends its normal context to its provider; a compact
+The local usage adapter reads usage metadata; the optional CPU guard reads local
+reservation, process and unit metadata. These two components make no model/network
+calls and do not upload their data. The coding client still sends its normal context
+to its provider; a compact
 hook report becomes part of that context. Reports include shortened agent labels,
 usage counts and a local output path. See [privacy boundaries](docs/privacy.md).
 
@@ -107,8 +129,9 @@ python3 scripts/check_public_content.py
 python3 scripts/check_evidence.py
 ```
 
-Tests use synthetic fixtures. The only real-session evidence is the explicitly
-allowlisted anonymized aggregate above. No raw runtime reports, personal
+Tests use synthetic fixtures. Real-session token evidence is the explicitly
+allowlisted anonymized aggregate above; CPU deployment observations and their
+limits are documented separately without raw host records. No raw runtime reports, personal
 configuration, session exports, histories or project-specific instructions belong here.
 
 Upstream: [Serena](https://github.com/oraios/serena),

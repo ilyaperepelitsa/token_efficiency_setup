@@ -7,8 +7,11 @@ evidence; include negative results, provenance and limits. Do not copy raw trans
 account configuration, credentials or machine-specific paths into this repository.
 
 Preserve native client permissions, routing, model selection and project gates.
-Hooks are optional, advisory and main-session-only; never block tools or wake idle
-sessions. Keep collection deterministic and reports capped. Distinguish local
+Usage-review hooks remain optional, advisory and main-session-only; never block
+tools or wake idle sessions. The explicitly opted-in Linux CPU component may
+enforce resource admission and due reviews, with documented client boundaries;
+keep it separate from usage reminders and preserve native sandbox/permissions.
+Keep collection deterministic and reports capped. Distinguish local
 transcript data from CodeBurn output and quota estimates from recorded tokens.
 
 Before publishing, run `python3 -m unittest discover -s tests -v` and

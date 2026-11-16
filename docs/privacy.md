@@ -30,6 +30,15 @@ them, enabling sharing/telemetry, exposing dashboards or choosing HTTP transport
 requires independent review. This setup uses client-owned stdio servers and does
 not enable CodeBurn remote sharing or publish dashboards.
 
+The optional CPU component reads private reservation configuration, process/start
+identities, cgroups and user-unit state. It briefly inspects command-line arguments
+to match waiting wrappers; it does not persist or execute their submitted source.
+Admission requests, current counters and review acknowledgements stay under
+`~/.cache/cpu-reservations/`. CPU names, unit labels and review evidence paths may
+appear in normal agent reports. These are local runtime data, never publication
+examples. The resource-only guardian does not add an external network endpoint or
+remove the process's native sandbox. Its installer is separate and explicit.
+
 Before publishing changes:
 
 ```sh

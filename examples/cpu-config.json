@@ -1,0 +1,13 @@
+{
+  "file": "/path/to/CPU.md",
+  "projects": {
+    "alpha": {
+      "roots": ["/path/to/worktree-alpha"],
+      "unit_prefixes": ["alpha-job-"]
+    },
+    "beta": {
+      "roots": ["/path/to/worktree-beta", "/path/to/another-beta-worktree"],
+      "unit_prefixes": ["beta-job-"]
+    }
+  }
+}
