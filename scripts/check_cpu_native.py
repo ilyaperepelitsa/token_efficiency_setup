@@ -36,6 +36,11 @@ def main():
         config.write_text(json.dumps({'file':str(table),'runtime':str(directory/'state'),
             'projects':{'example':{'roots':[str(project)],'unit_prefixes':['example-proof-task-']}}}))
         cfg=guard.load_config(config)
+        runner=directory/'cpu-run'
+        launcher=shlex.join([sys.executable,str(ROOT/'cpu/cpu_enforcement.py'),
+            '--config',str(config),'compact'])
+        runner.write_text(f'#!/bin/sh\nexec {launcher} "$@"\n')
+        runner.chmod(0o700)
         start=['systemd-run','--user','--collect','--unit='+unit,'-p','Restart=on-failure',
             '-p','MemoryMax=96M','-p','MemorySwapMax=0','-p','TasksMax=64',
             '/usr/bin/flock','-n',str(directory/'guardian.lock'),sys.executable,
@@ -45,12 +50,17 @@ def main():
             body={'hook_event_name':'PreToolUse','tool_name':'Bash','cwd':str(project),'tool_input':{}}
             for index in [0,1]:
                 reservation(eligible[index])
+                if index == 1:
+                    guard.DEFAULT_CONFIG=config
+                    cfg.update(compact_commands=True,compact_runner=str(runner))
                 other=eligible[1-index]
                 code=('import os,json; before=sorted(os.sched_getaffinity(0));\n'
                     f'try: os.sched_setaffinity(0,{{{other}}})\nexcept OSError: pass\n'
                     'print(json.dumps({"before":before,"after":sorted(os.sched_getaffinity(0))}))')
                 body['tool_input']['command']=shlex.join([sys.executable,'-c',code])
                 wrapped=guard.pre_hook(cfg,body,'claude')['hookSpecificOutput']['updatedInput']['command']
+                if index == 1:
+                    checks['compact_wrapper_used']=shlex.split(wrapped)[0]==str(runner)
                 result=subprocess.run(['/bin/bash','-lc',wrapped],cwd=project,capture_output=True,text=True,timeout=25)
                 if result.returncode: raise RuntimeError(result.stderr)
                 observed=json.loads(result.stdout)

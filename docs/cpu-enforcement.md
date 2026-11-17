@@ -74,6 +74,43 @@ Use the installed `cpu-reservations.py` with `--file /path/to/CPU.md status`, or
 need `--drained`, which is verified rather than blindly trusted. Keep work/resource
 details in existing lane briefs. CPU.md grows only for actual current project rows.
 
+## Quieter terminal
+
+The installer adds `cpu-run`, which keeps the actual command visible after a short
+admission reference. Successful admission prints no resource banner. The reference
+identifies admission metadata. Commands and failures remain available in the
+client transcript.
+
+For Codex versions supporting collapsed activity, merge these keys into the
+existing `[tui]` table in `~/.codex/config.toml` and relaunch or resume the client.
+The full-screen transcript folds tool activity, with details available to expand.
+This changes the display of all tool activity and replaces normal inline scrollback.
+[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
+
+```toml
+[tui]
+alternate_screen = "auto"
+fullscreen_transcript = true
+collapse_turn_details = true
+```
+
+To show resource status without model calls, add the following to `~/.tmux.conf`.
+If you already customize `status-right`, merge the `#(...)` segment into it.
+Reload with `tmux source-file ~/.tmux.conf`.
+
+```tmux
+set -g status-right '#(python3 "$HOME/.local/share/token-efficiency-setup/cpu/cpu_status.py" --cwd #{q:pane_current_path}) %H:%M'
+set -g status-right-length 100
+```
+
+Example: `CPU guard:on | scopes:ok | ~2.0/4 cores`. The indicator follows the
+selected pane's registered worktree. `guard:on` means the guardian service is
+active. `scopes:ok` means the CPU masks in the latest tracked sample fit the
+current reservation. The number is approximate owned CPU time per wall second
+over at least a minute. Missing, stale or partial measurements are labeled.
+This is a read-only display of existing measurements, with the same accounting
+limits as the audit.
+
 ## Verification and honest evidence
 
 ```sh
@@ -118,7 +155,8 @@ python3 scripts/install_cpu.py --config /path/to/private-config.json --clients c
 ```
 
 Removal affects only this installation's controller, hooks, launcher and marked
-drop-ins. Payload/configuration/backups remain for inspection; project jobs and
+drop-ins. Remove the optional tmux segment separately if you added it.
+Payload/configuration/backups remain for inspection; project jobs and
 their original resource properties are retained. Existing foreign installations
 are not migrated or overwritten automatically. For failures, inspect the exact
 guard diagnostic and `journalctl --user -u cpu-reservation-guardian.service` before

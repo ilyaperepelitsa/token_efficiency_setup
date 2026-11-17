@@ -24,8 +24,19 @@ def waiting_pids(tokens):
             # Do not inspect the embedded source/command argument.
             if b'--command' in args: args=args[:args.index(b'--command')]
             script=str(Path(guard.__file__).resolve()).encode()
-            if script not in args or b'exec' not in args or b'--ticket' not in args: continue
-            index=args.index(b'--ticket');token=args[index+1].decode()
+            if script not in args: continue
+            index=args.index(script)+1
+            if args[index]==b'--config':index+=2
+            elif args[index].startswith(b'--config='):index+=1
+            if args[index]==b'compact':
+                reference=args[index+1].decode()
+                if not re.fullmatch(r'[a-f0-9]{12}|[a-f0-9]{32}',reference): continue
+                matches=[t for t in tokens if t.startswith(reference)]
+                if len(matches)!=1: continue
+                token=matches[0]
+            elif args[index]==b'exec' and b'--ticket' in args:
+                token=args[args.index(b'--ticket')+1].decode()
+            else: continue
             if token in tokens: found[token]=int(path.name)
         except (OSError,ValueError,IndexError): continue
     return found

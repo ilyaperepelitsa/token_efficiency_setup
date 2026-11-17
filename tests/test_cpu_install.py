@@ -46,10 +46,14 @@ class CPUInstaller(unittest.TestCase):
             self.assertEqual(data['hooks']['PostToolUse'][0],original['hooks']['PostToolUse'][0])
             launcher=self.home/'.local/bin/cpu-enforce'
             self.assertTrue(launcher.is_file())
+            compact=self.home/'.local/bin/cpu-run'
+            self.assertTrue(compact.is_file())
+            self.assertTrue(json.loads(plan['config'].read_text())['compact_commands'])
             child=subprocess.Popen([str(launcher),'--help'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
             out,err=child.communicate(timeout=5)
             self.assertEqual(child.returncode,0,err);self.assertIn('CPU admission',out)
             self.m.install(self.m.prepare(self.home,self.config,['claude'],remove=True),apply=True,remove=True)
+            self.assertFalse(compact.exists())
             remaining=json.loads(settings.read_text())
             self.assertEqual(remaining['permissions'],original['permissions'])
             self.assertEqual(remaining['hooks']['PostToolUse'],original['hooks']['PostToolUse'])

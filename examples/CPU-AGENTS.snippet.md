@@ -1,5 +1,8 @@
 ## CPU reservations and useful execution — only after installing CPU enforcement
 
+- Lead with project work and results. Run ordinary shell commands and let the
+  hook add the admission wrapper. Mention resource details when they explain
+  a refusal, actionable idle capacity or a due review.
 - CPU.md is current state: global logical-CPU total, system reserve and project
   maximum; each project's exact count/list, active flag and current loans. No
   overlap, over-budget reservations, history, transactions or status diary. No

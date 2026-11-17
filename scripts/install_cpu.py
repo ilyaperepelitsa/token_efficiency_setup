@@ -139,12 +139,15 @@ def prepare(home,config_path,clients,remove=False):
     launcher=home/'.local/bin/cpu-enforce'
     files[launcher]='# '+MARKER+'\nexec '+shlex.join([sys.executable,str(payload/'cpu_enforcement.py'),'--config',str(config)])+' "$@"\n'
     files[launcher]='#!/bin/sh\n'+files[launcher]
-    for path in [service,launcher,*[p for p in files if p.name=='50-token-efficiency-cpu.conf']]:
+    compact=home/'.local/bin/cpu-run'
+    if not remove or (compact.is_file() and MARKER in compact.read_text()):
+        files[compact]=files[launcher].replace(' "$@"', ' compact "$@"')
+    for path in [service,launcher,*[p for p in files if p==compact or p.name=='50-token-efficiency-cpu.conf']]:
         if path.exists() and MARKER not in path.read_text(): raise ValueError('unmanaged CPU file conflict; preserve existing installation')
     if config.exists() and not payload.exists() and config.resolve()!=Path(config_path).resolve():
         raise ValueError('existing CPU installation; manual migration required')
     return {'home':home,'payload':payload,'config':config,'runtime':runtime,'files':files,
-            'normalized':normalized,'service':service,'launcher':launcher,'clients':clients}
+            'normalized':normalized,'service':service,'launcher':launcher,'compact':compact,'clients':clients}
 
 
 def write(path,text):
@@ -188,10 +191,13 @@ def install(plan,apply=False,remove=False):
     for path,text in plan['files'].items():
         if path.name not in {'settings.json','config.toml'}: write(path,text)
     plan['launcher'].chmod(0o700)
+    plan['compact'].chmod(0o700)
     subprocess.run(['systemctl','--user','daemon-reload'],check=True)
     subprocess.run(['systemctl','--user','enable','--now',UNIT],check=True)
     if active and changed: subprocess.run(['systemctl','--user','restart',UNIT],check=True)
     subprocess.run(['systemctl','--user','is-active','--quiet',UNIT],check=True)
+    normalized={**plan['normalized'],'compact_commands':True,'compact_runner':str(plan['compact'])}
+    write(plan['config'],json.dumps(normalized,indent=2)+'\n')
     for path,text in plan['files'].items():
         if path.name in {'settings.json','config.toml'}: write(path,text)
     return {'operation':'install','applied':True,'clients':plan['clients'],'guardian_active':True,

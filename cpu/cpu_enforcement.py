@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import shutil
 import shlex
 import signal
 import subprocess
@@ -268,11 +269,39 @@ def admit(cfg, unit):
         return selected
 
 
-def new_ticket(cfg,project,selected):
+def new_ticket(cfg,project,selected,cwd=None):
     token=secrets.token_hex(16)
-    atomic(cfg['runtime']/'tickets'/(token+'.json'),{'project':project,
-        'cpus':sorted(selected),'created':time.time(),'status':'waiting'})
+    row={'project':project,'cpus':sorted(selected),'created':time.time(),'status':'waiting'}
+    if cwd is not None: row['cwd']=str(cwd)
+    atomic(cfg['runtime']/'tickets'/(token+'.json'),row)
     return token
+
+
+def resolve_ticket(cfg,reference):
+    if not re.fullmatch(r'[a-f0-9]{12}|[a-f0-9]{32}',reference):
+        raise ValueError('invalid admission reference')
+    matches=[p.stem for p in (cfg['runtime']/'tickets').glob(reference+'*.json')
+        if re.fullmatch(r'[a-f0-9]{32}',p.stem)]
+    if len(matches)!=1: raise ValueError('admission reference is missing or ambiguous; rerun the original command')
+    return matches[0]
+
+
+def quote_shell_command(command):
+    single=shlex.quote(command)
+    # Double quotes keep common single-quoted source/filters readable. Retain
+    # literal expansion characters until the original shell executes the payload.
+    if '!' in command: return single
+    double='"'+command.replace('\\','\\\\').replace('"','\\"').replace('$','\\$').replace('`','\\`')+'"'
+    return double if len(double)<=len(single) else single
+
+
+def compact_shell(cfg,reference,command):
+    ticket=resolve_ticket(cfg,reference)
+    row=json.loads((cfg['runtime']/'tickets'/(ticket+'.json')).read_text())
+    cwd=row.get('cwd')
+    if not cwd or identify(cfg,info={'cwd':cwd})!=row['project']:
+        raise ValueError('compact admission has no matching worktree')
+    return exec_shell(cfg,row['project'],cwd,command,ticket)
 
 
 def wait_ticket(cfg,project,token):
@@ -415,9 +444,15 @@ def pre_hook(cfg, body, provider):
     except (OSError,ValueError) as exc:
         return {'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny',
             'permissionDecisionReason':'CPU reservation: '+str(exc)}}
-    ticket=new_ticket(cfg,project,selected)
-    wrapper=shlex.join(['/usr/bin/python3',str(Path(__file__).resolve()),'--config',str(cfg['config']),
-        'exec','--project',project,'--cwd',str(cwd),'--ticket',ticket,'--command',command])
+    ticket=new_ticket(cfg,project,selected,cwd)
+    runner=Path(cfg.get('compact_runner',str(Path.home()/'.local/bin/cpu-run')))
+    if cfg.get('compact_commands') and cfg['config']==DEFAULT_CONFIG.resolve() and runner.is_file():
+        resolved=shutil.which('cpu-run')
+        label='cpu-run' if resolved and Path(resolved).resolve()==runner.resolve() else str(runner)
+        wrapper=shlex.join([label,ticket[:12],'--'])+' '+quote_shell_command(command)
+    else:
+        wrapper=shlex.join(['/usr/bin/python3',str(Path(__file__).resolve()),'--config',str(cfg['config']),
+            'exec','--project',project,'--cwd',str(cwd),'--ticket',ticket,'--command',command])
     updated={**original,'command':wrapper}
     if 'cmd' in original: updated['cmd']=wrapper
     result={'hookEventName':'PreToolUse','updatedInput':updated}
@@ -536,6 +571,7 @@ def main():
     commands=parser.add_subparsers(dest='action',required=True)
     p=commands.add_parser('admit');p.add_argument('--unit',required=True)
     p=commands.add_parser('exec');p.add_argument('--project',required=True);p.add_argument('--cwd',required=True);p.add_argument('--command',required=True);p.add_argument('--ticket')
+    p=commands.add_parser('compact');p.add_argument('reference');p.add_argument('command')
     p=commands.add_parser('hook');p.add_argument('--provider',choices=['claude','codex'],required=True)
     p=commands.add_parser('audit');p.add_argument('--json',action='store_true')
     p=commands.add_parser('review');p.add_argument('--project',required=True);p.add_argument('--constraint',required=True);p.add_argument('--next',required=True);p.add_argument('--evidence',type=Path,required=True)
@@ -546,6 +582,7 @@ def main():
         cfg=load_config(args.config)
         if args.action=='admit': admit(cfg,args.unit)
         elif args.action=='exec': return exec_shell(cfg,args.project,args.cwd,args.command,args.ticket)
+        elif args.action=='compact': return compact_shell(cfg,args.reference,args.command)
         elif args.action=='audit':
             result=sample(cfg)
             if args.json: print(json.dumps(result,separators=(',',':')))

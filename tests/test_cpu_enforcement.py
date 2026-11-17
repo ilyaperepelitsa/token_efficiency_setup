@@ -84,6 +84,48 @@ class Enforcement(unittest.TestCase):
         self.assertEqual(args[args.index('--command')+1], command)
         self.assertEqual(self.m.pre_hook(self.cfg, body, 'codex')['hookSpecificOutput']['permissionDecision'], 'allow')
 
+    def test_compact_hook_keeps_real_command_visible_with_a_short_prefix(self):
+        runner=self.root/'cpu-run';runner.write_text('#!/bin/sh\n')
+        self.cfg['compact_commands']=True;self.cfg['compact_runner']=str(runner)
+        command="sed -n '90,113p' plan/file.hpp"
+        body={'tool_name':'Bash','cwd':str(self.root/'alpha'),'tool_input':{'command':command,'timeout':123}}
+        with patch.object(self.m,'DEFAULT_CONFIG',self.config):
+            result=self.m.pre_hook(self.cfg,body,'codex')['hookSpecificOutput']['updatedInput']
+        args=__import__('shlex').split(result['command'])
+        self.assertEqual(args[0],str(runner))
+        self.assertRegex(args[1],r'^[0-9a-f]{12}$')
+        self.assertEqual(args[2:],["--",command])
+        self.assertEqual(result['timeout'],123)
+        self.assertNotIn('--config',result['command'])
+        self.assertNotIn('--project',result['command'])
+        self.assertNotIn("'\"'\"'",result['command'])
+        ticket=list((self.cfg['runtime']/'tickets').glob(args[1]+'*.json'))
+        self.assertEqual(len(ticket),1)
+        row=json.loads(ticket[0].read_text())
+        self.assertEqual(row['cwd'],str(self.root/'alpha'))
+        self.assertNotIn('command',row)
+
+    def test_shell_quote_preserves_expansion_and_multiline_text(self):
+        commands=["sed -n '1,4p' file",'printf "%s" "$HOME"',"cat <<'EOF'\n$HOME `literal` \\\nEOF",
+                  "rg '!*.csv' .",'echo "$(printf unsafe)"',"printf '%s' 'a\\b'",'--help']
+        for command in commands:
+            for shell in [shell for shell in ['/bin/bash','/usr/bin/zsh'] if Path(shell).is_file()]:
+                argv=[sys.executable,'-c','import json,sys; print(json.dumps(sys.argv[1]))']
+                line=__import__('shlex').join(argv)+' '+self.m.quote_shell_command(command)
+                p=subprocess.run([shell,'-lc',line],capture_output=True,text=True)
+                self.assertEqual(p.returncode,0,p.stderr)
+                self.assertEqual(json.loads(p.stdout),command)
+
+    def test_compact_reference_rejects_missing_and_ambiguous_requests(self):
+        folder=self.cfg['runtime']/'tickets';folder.mkdir(parents=True)
+        first='a'*32;second='a'*12+'b'*20
+        (folder/(first+'.json')).write_text('{}')
+        self.assertEqual(self.m.resolve_ticket(self.cfg,first[:12]),first)
+        (folder/(second+'.json')).write_text('{}')
+        with self.assertRaises(ValueError):self.m.resolve_ticket(self.cfg,first[:12])
+        with self.assertRaises(ValueError):self.m.resolve_ticket(self.cfg,'../bad')
+        with self.assertRaises(ValueError):self.m.resolve_ticket(self.cfg,'f'*12)
+
     def test_hook_inactive_blocks_execution_but_allows_standalone_activation(self):
         body = {'tool_name': 'Bash', 'cwd': str(self.root/'beta'), 'tool_input': {'command': 'make -j2'}}
         self.assertEqual(self.m.pre_hook(self.cfg, body, 'claude')['hookSpecificOutput']['permissionDecision'], 'deny')

@@ -102,6 +102,10 @@ service launch gates, verified drain/loan checks and required 15-minute review
 acknowledgements. It preserves native sandboxes and uses a small resource-only
 guardian; installing the usage-review skill does **not** activate it.
 
+For a quieter terminal, the guard uses a short `cpu-run` prefix. You can
+collapse command activity in Codex and put CPU status in tmux.
+[Terminal setup](docs/cpu-enforcement.md#quieter-terminal).
+
 **Admission was verified; better throughput was not.** In the local deployment,
 missing completion notifications and a serial candidate dependency still left
 reserved capacity idle. The guard cannot create runnable work or prove useful

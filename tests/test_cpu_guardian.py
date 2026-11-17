@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +11,21 @@ import cpu_guardian as broker
 
 
 class Guardian(unittest.TestCase):
+    def test_compact_and_legacy_waiting_processes_match_full_tickets(self):
+        real_path=Path;first='abcdef123456'+'a'*20;second='fedcba654321'+'b'*20
+        script=str(Path(broker.guard.__file__).resolve()).encode()
+        with tempfile.TemporaryDirectory() as temp:
+            directory=Path(temp)
+            for pid,args in [(321,[b'python3',script,b'compact',first[:12].encode(),b'--',b'payload --ticket is data']),
+                             (322,[b'python3',script,b'--config',b'/config',b'exec',b'--project',b'compact',b'--ticket',second.encode(),b'--command',b'payload'])]:
+                p=directory/str(pid);p.mkdir();(p/'cmdline').write_bytes(b'\0'.join(args)+b'\0')
+            def factory(*parts):return directory if parts==('/proc',) else real_path(*parts)
+            with patch.object(broker,'Path',side_effect=factory):
+                found=broker.waiting_pids({first,second})
+                self.assertEqual(found,{first:321,second:322})
+                collision=first[:12]+'c'*20
+                self.assertNotIn(first,broker.waiting_pids({first,collision}))
+
     def test_cpu_bitmap_preserves_exact_sparse_mask(self):
         self.assertEqual(broker.bitmap({0,2,9}),[5,2])
 
