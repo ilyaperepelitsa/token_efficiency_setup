@@ -146,6 +146,11 @@ prove scientific acceptance or promise that every instruction will always be obe
 
 ## Removal and recovery
 
+If the systemd user manager stalls during active-service inventory, the
+enforcer retries that read once within the existing ten-second query budget.
+If neither attempt returns, admission remains blocked until it can verify
+the live reservations. Systemd mutations are issued once.
+
 Drain owned work and inspect requests first. Remove all installed CPU clients
 together so one client is not left pointing to a stopped guardian:
 

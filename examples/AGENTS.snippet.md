@@ -23,3 +23,14 @@
   shared instructions, with evidence and limits; do not accumulate usage diaries.
 
 These rules do not change models, native routing, permissions or resource limits.
+
+## Optional project memory
+
+- If Project Memory is available, use a scoped lookup when the task depends on
+  an earlier decision, convention, or handoff. Verify a real repository lookup
+  before relying on it. Use Serena for symbols and current source.
+- Check the cited evidence against the worktree and follow the latest supported
+  decision. If evidence is missing or conflicts, say what you could establish
+  and continue with the work you can verify.
+- Pass only the relevant results to workers. Reuse the supplied preflight for the
+  same task. Keep repository snapshots, notes and reports local.

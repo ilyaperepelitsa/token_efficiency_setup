@@ -66,7 +66,14 @@ def locked(cfg):
 
 
 def control(*args):
-    return subprocess.check_output(['systemctl', '--user', *args], text=True, timeout=10)
+    command = ['systemctl', '--user', *args]
+    if args[:1] == ('list-units',):
+        # Recover a stalled read without extending the inventory timeout budget.
+        try:
+            return subprocess.check_output(command, text=True, timeout=5)
+        except subprocess.TimeoutExpired:
+            return subprocess.check_output(command, text=True, timeout=5)
+    return subprocess.check_output(command, text=True, timeout=10)
 
 
 def unit_info(unit):

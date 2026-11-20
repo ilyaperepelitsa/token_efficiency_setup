@@ -31,6 +31,24 @@ class Enforcement(unittest.TestCase):
                          'beta': {'roots': [str(self.root/'beta')], 'unit_prefixes': ['beta-']}}}))
         self.cfg = self.m.load_config(self.config)
 
+    def test_service_inventory_retries_once_after_a_timeout(self):
+        argv = ['systemctl', '--user', 'list-units', '--output=json']
+        with patch.object(subprocess, 'check_output',
+                          side_effect=[subprocess.TimeoutExpired(argv, 5), '[]']) as query:
+            self.assertEqual(self.m.control(*argv[2:]), '[]')
+        self.assertEqual(query.call_count, 2)
+        self.assertEqual(sum(call.kwargs['timeout'] for call in query.call_args_list), 10)
+        self.assertTrue(all(call.args == (argv,) for call in query.call_args_list))
+
+    def test_persistent_timeout_fails_closed_and_mutations_are_not_retried(self):
+        for verb, expected_calls in [('list-units', 2), ('set-property', 1)]:
+            with self.subTest(verb=verb):
+                with patch.object(subprocess, 'check_output',
+                                  side_effect=subprocess.TimeoutExpired(verb, 5)) as query:
+                    with self.assertRaises(subprocess.TimeoutExpired):
+                        self.m.control(verb)
+                self.assertEqual(query.call_count, expected_calls)
+
     def test_prefix_and_worktree_identification(self):
         self.assertEqual(self.m.identify(self.cfg, 'alpha-compile.service', {}), 'alpha')
         self.assertEqual(self.m.identify(self.cfg, 'random.service',
@@ -211,7 +229,9 @@ class Enforcement(unittest.TestCase):
             body['stop_hook_active']=True
             self.assertEqual(self.m.feedback_hook(self.cfg,body)['decision'],'block')
         evidence=self.root/'lane.md';evidence.write_text('Waiting on a live integration lock; next target identified.')
-        self.m.review(self.cfg,'alpha','lock','launch target when integration lock releases',evidence)
+        os.utime(evidence, (now + 1, now + 1))
+        with patch.object(self.m.time, 'time', return_value=now + 1):
+            self.m.review(self.cfg,'alpha','lock','launch target when integration lock releases',evidence)
         self.assertEqual(self.m.feedback_hook(self.cfg,body),{})
         with self.assertRaises(ValueError):
             self.m.review(self.cfg,'alpha','lock','retry',self.table)

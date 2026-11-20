@@ -40,6 +40,21 @@ skill links, and optionally merges one Claude hook. It does not install external
 packages or rewrite AGENTS.md/MCP configuration. Existing unrelated settings are
 preserved; conflicting skill paths cause a refusal. Preview changes with `--dry-run`.
 
+## Optional project memory
+
+Use Serena to verify current source and Memory Lab to retrieve prior decisions,
+conventions, or handoffs. If your client already has a Project Memory provider,
+add the [optional instructions](examples/AGENTS.snippet.md#optional-project-memory)
+and verify a real lookup on the current repository. This toolkit's installer
+leaves memory provider setup to the client.
+
+In an eight-task synthetic coding benchmark with executable checks, Serena
+plus repository guidance passed four tasks. Adding current Memory Lab passed
+all eight, including the four that depended on earlier decisions. That measures
+the value of supplying relevant history in this fixture set. Experimental
+compact memory delivery is available separately as a local Memory Lab opt-in.
+The benchmark does not establish savings on other workloads.
+
 ## The review
 
 ```sh
